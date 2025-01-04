@@ -1,3 +1,4 @@
+import BinaryReader from './lib/BinaryReader';
 import './style.css';
 import * as THREE from 'three';
 
@@ -15,24 +16,90 @@ function findTMDOffsets(buffer) {
   return tmds;
 }
 
+function getTMD(reader) {
+  let tmd = {};
+  tmd._offset = (reader.offset-4).toString(16).toUpperCase().padStart(8, '0');
+  // Header
+  tmd.flags = reader.nextUint32();
+  tmd.numObj = reader.nextUint32();
+
+  const objects = [];
+  for(let i=0; i < tmd.numObj; i++) {
+    objects.push({
+      // Object Table
+      vertexTop: reader.nextUint32(),
+      numVertex: reader.nextUint32(),
+      normalTop: reader.nextUint32(),
+      numNormal: reader.nextUint32(),
+      primitiveTop: reader.nextUint32(),
+      numPrimitive: reader.nextUint32(),
+      scale: reader.nextInt32()
+    });
+  }
+  tmd.objects = objects;
+
+  tmd.objects.forEach(object => {
+    // Iterate through the primitives
+    const vertexIdx = [];
+    for(let i=0; i < object.numPrimitive; i++) {
+      // Let's move 24 bytes to get the vertex index
+      reader.seek(reader.offset+24);
+      vertexIdx.push(reader.nextUint16());
+      vertexIdx.push(reader.nextUint16());
+      vertexIdx.push(reader.nextUint16());
+      vertexIdx.push(reader.nextUint16());
+    }
+    object.vertexIdx = vertexIdx; // if you divide by 4, it must get the numPrimitive
+
+    // Iterate through the vertex positions ej:18
+    const vertex = [];
+    for(let i=0; i < object.numVertex; i++) {
+      vertex.push({
+        x: reader.nextInt16(),
+        y: reader.nextInt16(),
+        z: reader.nextInt16()
+      });
+      reader.nextInt16() // discard the PAD (00)
+    }
+
+    object.vertex = vertex;
+  });
+
+
+
+  return tmd;
+
+}
+
+function parseTMD(reader) {
+  while(reader.offset < reader.dataView.byteLength-4) {
+    const bytes = reader.nextUint32();
+    if(bytes===0x00000041) { // TMD ID
+      console.log(getTMD(reader))
+    }
+  }
+}
+
 const inputFile = document.getElementById('inputFile');
 inputFile.addEventListener('change', async function(evt) {
   const file = evt.target.files[0];
 
   if(file) {
-    const reader = new FileReader();
+    const fileReader = new FileReader();
 
-    reader.onload = function() {
-      const arrayBuffer = reader.result;
+    fileReader.onload = function() {
+      const arrayBuffer = fileReader.result;
       const buffer = new Uint8Array(arrayBuffer);
 
-      const offsets = findTMDOffsets(buffer, [0x41, 0x00, 0x00, 0x00]);
+      //const offsets = findTMDOffsets(buffer, [0x41, 0x00, 0x00, 0x00]);
 
-      const dv = new DataView(arrayBuffer);
+      const reader = new BinaryReader(arrayBuffer);
+      parseTMD(reader)
+      console.log(reader.dataView.byteLength);
 
     }
 
-    reader.readAsArrayBuffer(file);
+    fileReader.readAsArrayBuffer(file);
   }
 })
 
