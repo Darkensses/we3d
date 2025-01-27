@@ -1,6 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import VertexInteraction from './lib/VertexInteraction';
 
 // Canvas
 const canvas = document.querySelector('canvas#webgl');
@@ -11,7 +12,7 @@ const scene = new THREE.Scene();
 /**
  * Object
  */
-const geometry = new THREE.BufferGeometry();
+//const geometry = new THREE.BufferGeometry();
 const vertices = new Float32Array([
   -1.0, -1.0, 1.0, // v0
    1.0, -1.0, 1.0, // v1
@@ -20,7 +21,8 @@ const vertices = new Float32Array([
   -1.0,  1.0, 1.0, // v4
   -1.0, -1.0, 1.0  // v5
 ]);
-geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+//geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+const geometry = new THREE.BoxGeometry(1,1,1);
 const mesh = new THREE.Mesh(
   geometry,
   new THREE.MeshBasicMaterial({ color: 'red', wireframe: true })
@@ -61,101 +63,21 @@ controls.enableDamping = true;
 /**
  * Renderer
  */
-const renderer = new THREE.WebGLRenderer({ canvas });
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-/**
- * Interaction
- * It was taken from
- * https://hofk.de/main/discourse.threejs/2018/Interaction%20with%20Points/Interaction%20with%20Points.html
- * @author prisoner849
- *
- * More info:
- * https://discourse.threejs.org/t/line-segment-coordinates/4358/3
- */
-let raycaster = new THREE.Raycaster();
-raycaster.params.Points.threshold = 0.25;
-let mouse = new THREE.Vector2();
-let intersects = null;
-let plane = new THREE.Plane();
-let planeNormal = new THREE.Vector3();
-let currentIndex = null;
-let planePoint = new THREE.Vector3();
-let dragging = false;
+const interaction = new VertexInteraction(geometry, points, 0.25, controls, camera, sizes);
 
-window.addEventListener("mousedown", mouseDown, false);
-window.addEventListener("mousemove", mouseMove, false);
-window.addEventListener("mouseup", mouseUp, false);
-
-function mouseDown(event) {
-  setRaycaster(event);
-  getIndex();
-  dragging = true;
-}
-
-function mouseMove(event) {
-  if (dragging && currentIndex !== null) {
-    setRaycaster(event);
-    raycaster.ray.intersectPlane(plane, planePoint);
-    geometry.attributes.position.setXYZ(currentIndex, planePoint.x, planePoint.y, planePoint.z);
-    geometry.attributes.position.needsUpdate = true;
-
-    // Recalculate the bounding sphere of the geometry after modifying the positions.
-    // This is necessary because the raycaster uses the geometry's bounding limits
-    // to detect intersections.
-    // If we don't update these limits, the raycaster won't correctly detect
-    // the points in their new positions.
-    geometry.computeBoundingSphere();
-  }
-}
-
-function mouseUp(event) {
-  dragging = false;
-  currentIndex = null;
-  controlsEnabled(true);
-}
-
-function getIndex() {
-  intersects = raycaster.intersectObject(points);
-  if (intersects.length === 0) {
-    currentIndex = null;
-    return;
-  }
-  controlsEnabled(false);
-  currentIndex = intersects[0].index;
-  setPlane(intersects[0].point);
-  console.log(currentIndex, intersects[0].point)
-}
-
-function setPlane(point) {
-  planeNormal.subVectors(camera.position, point).normalize();
-  plane.setFromNormalAndCoplanarPoint(planeNormal, point);
-}
-
-function setRaycaster(event) {
-  getMouse(event);
-  raycaster.setFromCamera(mouse, camera);
-}
-
-function getMouse(event) {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-}
-
-function controlsEnabled(state){
-	controls.enableZoom = state;
-  controls.enableRotate = state;
-  controls.enablePan = state;
-}
-
-
+window.addEventListener("mousedown", (e) => interaction.mouseDown(e), false);
+window.addEventListener("mousemove", (e) => interaction.mouseMove(e), false);
+window.addEventListener("mouseup", (e) => interaction.mouseUp(e), false);
 
 /**
  * Animate
  */
 const animate = () => {
-  //controls.update();
+  controls.update();
   renderer.render(scene, camera);
   window.requestAnimationFrame(animate);
 };
