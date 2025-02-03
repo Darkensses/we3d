@@ -6,8 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite App</title>
   </head>
-  <body>
-    <canvas id="webgl"></canvas>
-    <script type="module" src="/src/editor.js"></script>
+  <body class="bg-black">
+    <div class="flex flex-col h-screen">
+      <div class="text-[#00ff00] w-full flex flex-col items-center pt-8 pb-4">
+        <pre class="text-xs">
+██╗    ██╗███████╗██████╗ ██████╗
+██║    ██║██╔════╝╚════██╗██╔══██╗
+██║ █╗ ██║█████╗   █████╔╝██║  ██║
+██║███╗██║██╔══╝   ╚═══██╗██║  ██║
+╚███╔███╔╝███████╗██████╔╝██████╔╝
+╚══╝╚══╝ ╚══════╝╚═════╝ ╚═════╝
+        </pre>
+        <p class="text-xs">View, edit and hack the 3D TMD models from the Winning Eleven PSX ROM.</p>
+      </div>
+      <div class="w-full flex justify-center gap-8 pb-4">
+        <input type="file" id="inputFile"
+          class="w-full max-w-2xl min-w-80
+          file:cursor-pointer file:bg-[#00ff00] file:p-2 file:text-black
+          cursor-pointer border-2 border-[#00ff00] text-[#00ff00] text-xs"
+        />
+
+        <button class="bg-[#00ff00] p-2 cursor-pointer text-xs">Download</button>
+      </div>
+      <div id="editor" class="flex-grow border-2 border-[#00ff00]">
+        <canvas id="webgl"></canvas>
+      </div>
+    </div>
+    <script type="module" src="/src/deleteme.js"></script>
   </body>
 </html>
