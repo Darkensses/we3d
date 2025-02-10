@@ -6,6 +6,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import TMDParser from './lib/TMDParser';
 import BinaryReader from './lib/BinaryReader';
+import { Pane } from 'tweakpane';
+import GUI from 'lil-gui';
 
 const canvas = document.querySelector('canvas#webgl');
 const divEditor = document.querySelector('div#editor');
@@ -28,6 +30,7 @@ inputFile.addEventListener('change', async function (evt) {
 
       //renderTMDs(tmds[10]); // porteria
       //renderTMDs(tmds[8]); // techo del estadio?
+      console.log(tmds[10].objects[0].vertex)
       renderTMDs(tmds);
     }
 
@@ -97,34 +100,60 @@ function renderTMDs(data) {
   /**
    * TMD MODELS
    */
-    const models = [];
-    data.forEach((tmd) => {
-      const geometry = new THREE.BufferGeometry();
-      const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => [x / 1000, y / 1000, z / 1000]));
-      const indices  = [];
+  const models = [];
+  data.forEach((tmd) => {
+    const geometry = new THREE.BufferGeometry();
+    //const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => [x / 1000, y / 1000, z / 1000]));
+    const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => [x, y, z]));
+    const indices  = [];
 
-      // We need to build the faces.
-      // Each face is composed by 2 triangles, that's why the array is pushed twice.
-      // The composition of the first triangle is: vi0, vi1, vi2
-      // The composition of the second one is:     vi1, vi3, vi2
-      for(let i=0; i < tmd.objects[0].vertexIdx.length; i+=4) {
-        indices.push(tmd.objects[0].vertexIdx[i], tmd.objects[0].vertexIdx[i+1], tmd.objects[0].vertexIdx[i+2]);
-        indices.push(tmd.objects[0].vertexIdx[i+1], tmd.objects[0].vertexIdx[i+3], tmd.objects[0].vertexIdx[i+2]);
-      }
+    // We need to build the faces.
+    // Each face is composed by 2 triangles, that's why the array is pushed twice.
+    // The composition of the first triangle is: vi0, vi1, vi2
+    // The composition of the second one is:     vi1, vi3, vi2
+    for(let i=0; i < tmd.objects[0].vertexIdx.length; i+=4) {
+      indices.push(tmd.objects[0].vertexIdx[i], tmd.objects[0].vertexIdx[i+1], tmd.objects[0].vertexIdx[i+2]);
+      indices.push(tmd.objects[0].vertexIdx[i+1], tmd.objects[0].vertexIdx[i+3], tmd.objects[0].vertexIdx[i+2]);
+    }
 
-      //console.log(vertices)
+    //console.log(vertices)
+    const scale = 0.001;
 
-      geometry.setIndex(indices);
-      geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
-      const material = new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true});
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.rotation.x = -Math.PI;
-      //mesh.visible = false;
-      scene.add(mesh);
+    const material = new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true});
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.x = -Math.PI;
+    mesh.scale.set(scale, scale, scale)
+    //mesh.visible = false;
+    scene.add(mesh);
 
-      models.push({mesh, visible:true})
-    });
+    models.push({mesh, visible:true})
+  });
+
+  /**
+   * tweakpane
+   */
+
+  const pane = new Pane({
+    container: document.getElementById('toolpane'),
+    title: 'TMDs',
+    expanded: true,
+  });
+
+  //const gui = new GUI();
+  models.forEach((tmd, index) => {
+
+    // gui.add(tmd, 'visible').name(`Object ${index + 1}`).onChange((visible) => {
+    //   tmd.mesh.visible = visible;
+    // });
+
+    const f = pane.addFolder({ title: `Object ${index + 1}`, expanded: false });
+    f.addBinding(tmd, 'visible').on('change', (ev) => tmd.mesh.visible = ev.value);
+    f.addButton({title: 'Camera'}).on('click', () => console.log('XDDD'));
+  });
+
 
   // Controls
   const controls = new OrbitControls(camera, canvas);
