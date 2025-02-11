@@ -1,16 +1,23 @@
 import './style.css';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { Pane } from 'tweakpane';
+import CameraControls from 'camera-controls';
+
+/**
+ * My libs
+ */
 import TMDParser from './lib/TMDParser';
 import BinaryReader from './lib/BinaryReader';
-import { Pane } from 'tweakpane';
-import GUI from 'lil-gui';
+import VertexInteraction from './lib/VertexInteraction';
 
 const canvas = document.querySelector('canvas#webgl');
 const divEditor = document.querySelector('div#editor');
+let tweakpane = null;
+
+CameraControls.install( { THREE: THREE } );
 
 const inputFile = document.getElementById('inputFile');
 inputFile.addEventListener('change', async function (evt) {
@@ -31,6 +38,9 @@ inputFile.addEventListener('change', async function (evt) {
       //renderTMDs(tmds[10]); // porteria
       //renderTMDs(tmds[8]); // techo del estadio?
       console.log(tmds[10].objects[0].vertex)
+      if(tweakpane !== null) {
+        tweakpane.dispose();
+      }
       renderTMDs(tmds);
     }
 
@@ -69,10 +79,15 @@ function renderTMDs(data) {
   /**
    * Camera
    */
-  const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 1000);
+  const clock = new THREE.Clock();
+  const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.01, 1000);
   camera.position.set(0, 0, 5);
-  camera.lookAt(scene.position)
-  scene.add(camera);
+
+  const cameraControls = new CameraControls( camera, renderer.domElement );
+  cameraControls.infinityDolly = true;
+  cameraControls.dollyToCursor = true;
+  cameraControls.minDistance = 3;
+  cameraControls.maxDistance = 7;
 
   /**
    * Post-processing
@@ -125,49 +140,78 @@ function renderTMDs(data) {
     const material = new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true});
     const mesh = new THREE.Mesh(geometry, material);
     mesh.rotation.x = -Math.PI;
-    mesh.scale.set(scale, scale, scale)
-    //mesh.visible = false;
+    mesh.scale.set(scale, scale, scale);
+    mesh.visible = true;
     scene.add(mesh);
 
-    models.push({mesh, visible:true})
+
+    const points = new THREE.Points(geometry, new THREE.PointsMaterial({
+      size: 0.025,
+      color: 'yellow'
+    }));
+    points.rotation.x = -Math.PI;
+    points.scale.set(scale, scale, scale);
+    points.visible = true;
+    scene.add(points);
+
+    models.push({mesh, points, visible:true});
+
+    // TODO:
+    // I need to scale the geometry, not the mesh,
+    // because the points are being set according to
+    // the geometry positions.
+
+    // const interaction = new VertexInteraction(geometry, points, 0.025, cameraControls, camera, sizes);
+
+    // window.addEventListener("mousedown", (e) => interaction.mouseDown(e), false);
+    // window.addEventListener("mousemove", (e) => interaction.mouseMove(e), false);
+    // window.addEventListener("mouseup", (e) => interaction.mouseUp(e), false);
   });
 
   /**
    * tweakpane
    */
 
-  const pane = new Pane({
+  tweakpane = new Pane({
     container: document.getElementById('toolpane'),
     title: 'TMDs',
     expanded: true,
   });
 
-  //const gui = new GUI();
   models.forEach((tmd, index) => {
 
-    // gui.add(tmd, 'visible').name(`Object ${index + 1}`).onChange((visible) => {
-    //   tmd.mesh.visible = visible;
-    // });
-
-    const f = pane.addFolder({ title: `Object ${index + 1}`, expanded: false });
-    f.addBinding(tmd, 'visible').on('change', (ev) => tmd.mesh.visible = ev.value);
-    f.addButton({title: 'Camera'}).on('click', () => console.log('XDDD'));
+    const f = tweakpane.addFolder({ title: `Object ${index + 1}`, expanded: false });
+    f.addBinding(tmd, 'visible').on('change', (ev) => {
+      tmd.mesh.visible = ev.value;
+      tmd.points.visible = ev.value;
+      composer.render();
+    });
+    f.addButton({title: 'Camera'}).on('click', () => cameraControls.fitToSphere(tmd.mesh, true));
   });
 
 
-  // Controls
-  const controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = true;
+  composer.render();
 
   /**
    * Animate
    */
   const animate = () => {
-    controls.update();
+    const delta = clock.getDelta();
+	  const elapsed = clock.getElapsedTime();
+	  const updated = cameraControls.update( delta );
+
     //renderer.render(scene, camera); //comment if you want to use unreal bloom pass
-    composer.render();
+
     //mesh.rotation.y += 0.01; // Dummy Mesh for testing
     window.requestAnimationFrame(animate);
+
+    if (updated) {
+
+      //renderer.render( scene, camera );
+      composer.render();
+      console.log( 'rendered' );
+
+    }
   };
 
   animate();
