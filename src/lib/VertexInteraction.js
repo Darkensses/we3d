@@ -12,8 +12,9 @@ import { Plane, Raycaster, Vector2, Vector3 } from "three";
  */
 
 export default class VertexInteraction {
-	constructor(geometry, points, pointsThreshold=0.25, controls, camera, sizes) {
+	constructor(domElement, geometry, points, pointsThreshold=0.25, controls, camera, sizes) {
 		// From the main scene
+		this.domElement = domElement;
 		this.geometry = geometry;
 		this.points = points;
 		this.controls = controls;
@@ -87,8 +88,12 @@ export default class VertexInteraction {
 	}
 
 	#getMouse(event) {
+		const canvasBounds = this.domElement.getBoundingClientRect();
+		const mouseY = event.clientY - canvasBounds.top;
 		this.mouse.x = (event.clientX / this.sizes.width) * 2 - 1;
-		this.mouse.y = -(event.clientY / this.sizes.height) * 2 + 1;
+		//this.mouse.y = -(event.clientY / this.sizes.height) * 2 + 1;
+		this.mouse.y = -(mouseY / canvasBounds.height) * 2 + 1
+		console.log(this.mouse)
 	}
 
 	#controlsEnabled(state) {
