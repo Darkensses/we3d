@@ -116,10 +116,21 @@ function renderTMDs(data) {
    * TMD MODELS
    */
   const models = [];
-  data.forEach((tmd) => {
+  data.forEach((tmd, index) => {
     const geometry = new THREE.BufferGeometry();
     //const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => [x / 1000, y / 1000, z / 1000]));
-    const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => [x, y, z]));
+    const scale = 0.001;
+    const rotationX = -Math.PI;
+    const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => {
+      x *= scale;
+      y *= scale;
+      z *= scale;
+
+      const rY = y * Math.cos(rotationX) - z * Math.sin(rotationX);
+      const rZ = y * Math.sin(rotationX) + z * Math.cos(rotationX);
+
+      return [x, rY, rZ];
+    }));
     const indices  = [];
 
     // We need to build the faces.
@@ -131,28 +142,47 @@ function renderTMDs(data) {
       indices.push(tmd.objects[0].vertexIdx[i+1], tmd.objects[0].vertexIdx[i+3], tmd.objects[0].vertexIdx[i+2]);
     }
 
-    //console.log(vertices)
-    const scale = 0.001;
+    if(index===10) {
+      console.log(tmd.objects[0].vertex)
+      console.log(vertices)
+    }
 
     geometry.setIndex(indices);
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
+
     const material = new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true});
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.rotation.x = -Math.PI;
-    mesh.scale.set(scale, scale, scale);
+    //mesh.rotation.x = -Math.PI;
+    //mesh.scale.set(scale, scale, scale);
     mesh.visible = true;
     scene.add(mesh);
 
-
     const points = new THREE.Points(geometry, new THREE.PointsMaterial({
-      size: 0.025,
-      color: 'yellow'
+      size: 0.1,
+      color: 'white'
     }));
-    points.rotation.x = -Math.PI;
-    points.scale.set(scale, scale, scale);
+    //points.rotation.x = -Math.PI;
+    //points.scale.set(scale, scale, scale);
     points.visible = true;
     scene.add(points);
+
+    if(index===10) {
+      const interaction = new VertexInteraction(canvas, geometry, points, 0.1, cameraControls, cameraControls.camera, sizes);
+
+      window.addEventListener("mousedown", (e) => interaction.mouseDown(e), false);
+      window.addEventListener("mousemove", (e) => {
+        interaction.mouseMove(e);
+        //renderer.render(scene, camera);
+        composer.render();
+      }, false);
+      window.addEventListener("mouseup", (e) => {
+        interaction.mouseUp(e);
+        //renderer.render(scene, camera);
+        composer.render();
+      }, false);
+    }
+
 
     models.push({mesh, points, visible:true});
 
@@ -161,11 +191,6 @@ function renderTMDs(data) {
     // because the points are being set according to
     // the geometry positions.
 
-    // const interaction = new VertexInteraction(geometry, points, 0.025, cameraControls, camera, sizes);
-
-    // window.addEventListener("mousedown", (e) => interaction.mouseDown(e), false);
-    // window.addEventListener("mousemove", (e) => interaction.mouseMove(e), false);
-    // window.addEventListener("mouseup", (e) => interaction.mouseUp(e), false);
   });
 
   /**
