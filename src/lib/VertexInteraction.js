@@ -36,7 +36,20 @@ export default class VertexInteraction {
 	mouseDown(event) {
 		this.#setRayCaster(event);
 		this.#getIndex();
-		this.dragging = true;
+		// this.dragging = true;
+		// this fix the issue with multiple models/geometries:
+		if (this.currentIndex !== null) {
+			console.log(
+				this.currentIndex, {
+					x: this.geometry.attributes.position.getX(this.currentIndex),
+					y: this.geometry.attributes.position.getY(this.currentIndex),
+					z: this.geometry.attributes.position.getZ(this.currentIndex),
+				}
+			)
+			this.dragging = true;
+			return true;
+		}
+		return false;
 	}
 
 	mouseMove(event) {
@@ -93,7 +106,6 @@ export default class VertexInteraction {
 		this.mouse.x = (event.clientX / this.sizes.width) * 2 - 1;
 		//this.mouse.y = -(event.clientY / this.sizes.height) * 2 + 1;
 		this.mouse.y = -(mouseY / canvasBounds.height) * 2 + 1
-		console.log(this.mouse)
 	}
 
 	#controlsEnabled(state) {

@@ -116,6 +116,10 @@ function renderTMDs(data) {
    * TMD MODELS
    */
   const models = [];
+  const backupModels = [];
+  const interactions = [];
+  let activeInteraction = null;
+
   data.forEach((tmd, index) => {
     const geometry = new THREE.BufferGeometry();
     //const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => [x / 1000, y / 1000, z / 1000]));
@@ -142,11 +146,6 @@ function renderTMDs(data) {
       indices.push(tmd.objects[0].vertexIdx[i+1], tmd.objects[0].vertexIdx[i+3], tmd.objects[0].vertexIdx[i+2]);
     }
 
-    if(index===10) {
-      console.log(tmd.objects[0].vertex)
-      console.log(vertices)
-    }
-
     geometry.setIndex(indices);
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
@@ -162,29 +161,15 @@ function renderTMDs(data) {
       size: 0.1,
       color: 'white'
     }));
-    //points.rotation.x = -Math.PI;
-    //points.scale.set(scale, scale, scale);
     points.visible = true;
     scene.add(points);
 
-    if(index===10) {
-      const interaction = new VertexInteraction(canvas, geometry, points, 0.1, cameraControls, cameraControls.camera, sizes);
-
-      window.addEventListener("mousedown", (e) => interaction.mouseDown(e), false);
-      window.addEventListener("mousemove", (e) => {
-        interaction.mouseMove(e);
-        //renderer.render(scene, camera);
-        composer.render();
-      }, false);
-      window.addEventListener("mouseup", (e) => {
-        interaction.mouseUp(e);
-        //renderer.render(scene, camera);
-        composer.render();
-      }, false);
-    }
+    const interaction = new VertexInteraction(canvas, geometry, points, 0.1, cameraControls, cameraControls.camera, sizes);
+    interactions.push(interaction)
 
 
     models.push({mesh, points, visible:true});
+    backupModels.push({positions: geometry.attributes.position.array.slice()})
 
     // TODO:
     // I need to scale the geometry, not the mesh,
@@ -194,9 +179,31 @@ function renderTMDs(data) {
   });
 
   /**
+   * Vertex Listeners
+   */
+  canvas.addEventListener("mousedown", (e) => {
+    activeInteraction = interactions.find((interaction) => interaction.mouseDown(e));
+  }, false);
+
+  canvas.addEventListener("mousemove", (e) => {
+    if(activeInteraction) {
+      activeInteraction.mouseMove(e);
+      composer.render();
+    }
+  }, false);
+
+  canvas.addEventListener("mouseup", (e) => {
+    if(activeInteraction) {
+      activeInteraction.mouseUp(e);
+      composer.render();
+      activeInteraction = null;
+    }
+  }, false);
+
+
+  /**
    * tweakpane
    */
-
   tweakpane = new Pane({
     container: document.getElementById('toolpane'),
     title: 'TMDs',
@@ -211,7 +218,18 @@ function renderTMDs(data) {
       tmd.points.visible = ev.value;
       composer.render();
     });
-    f.addButton({title: 'Camera'}).on('click', () => cameraControls.fitToSphere(tmd.mesh, true));
+    f.addButton({title: 'Focus'}).on('click', () => cameraControls.fitToSphere(tmd.mesh, true));
+    f.addButton({title: 'Reset'}).on('click', () => {
+      const positions = tmd.mesh.geometry.attributes.position.array;
+      const originalPositions = backupModels[index].positions;
+
+      for (let i = 0; i < originalPositions.length; i++) {
+          positions[i] = originalPositions[i];
+      }
+      tmd.mesh.geometry.attributes.position.needsUpdate = true;
+      tmd.mesh.geometry.computeBoundingSphere();
+      composer.render();
+    });
   });
 
 
@@ -222,7 +240,6 @@ function renderTMDs(data) {
    */
   const animate = () => {
     const delta = clock.getDelta();
-	  const elapsed = clock.getElapsedTime();
 	  const updated = cameraControls.update( delta );
 
     //renderer.render(scene, camera); //comment if you want to use unreal bloom pass
@@ -231,11 +248,7 @@ function renderTMDs(data) {
     window.requestAnimationFrame(animate);
 
     if (updated) {
-
-      //renderer.render( scene, camera );
       composer.render();
-      console.log( 'rendered' );
-
     }
   };
 
