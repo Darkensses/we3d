@@ -16,6 +16,10 @@ import VertexInteraction from './lib/VertexInteraction';
 const canvas = document.querySelector('canvas#webgl');
 const divEditor = document.querySelector('div#editor');
 let tweakpane = null;
+let models = [];
+
+let binfile_test;
+let tmds_test;
 
 CameraControls.install( { THREE: THREE } );
 
@@ -33,10 +37,11 @@ inputFile.addEventListener('change', async function (evt) {
       const tmdParser = new TMDParser();
       const tmds = tmdParser.parse(reader);
 
+      binfile_test = reader;
+      tmds_test = tmds;
+
       console.log(tmds)
 
-      //renderTMDs(tmds[10]); // porteria
-      //renderTMDs(tmds[8]); // techo del estadio?
       console.log(tmds[10].objects[0].vertex)
       if(tweakpane !== null) {
         tweakpane.dispose();
@@ -47,6 +52,73 @@ inputFile.addEventListener('change', async function (evt) {
     fileReader.readAsArrayBuffer(file);
   }
 });
+
+// Aunque si sirve, hay que revisar como funciona el renderizado
+// cada vez que seabre un archivo, es decir, tiene que resetearse todo!
+// se están empalmandolos demás modelos
+const buttonDownload = document.getElementById('download');
+buttonDownload.addEventListener('click', function(evt) {
+  // if(models.length > 0) {
+  //   models.forEach((tmd, index) => {
+  //     if(index === 10) {
+  //       const positions = tmd.mesh.geometry.attributes.position.array.slice();
+  //       for(let i = 0; i < positions.length; i+=3) {
+  //         console.log({
+  //           x: positions[i],
+  //           y: positions[i+1],
+  //           z: positions[i+2]
+  //         })
+  //       }
+  //     }
+  //   })
+  // }
+  const tmdParser = new TMDParser();
+  //console.log(models[0].mesh.geometry.attributes.position.array.slice())
+  let patchedTMDs = [];
+
+  const iScale = 1/0.001;
+  const iRotation = Math.PI;
+
+  models.forEach((tmd) => {
+    const positions = tmd.mesh.geometry.attributes.position.array.slice();
+    const vertex = []
+    for(let i = 0; i < positions.length; i+=3) {
+      const iY = positions[i+1] * Math.cos(iRotation) - positions[i+2] * Math.sin(iRotation);
+      const iZ = positions[i+1] * Math.sin(iRotation) + positions[i+2] * Math.cos(iRotation);
+      vertex.push({
+        x: Math.round(positions[ i ] * iScale),
+        y: Math.round(iY * iScale), //positions[i+1],
+        z: Math.round(iZ * iScale), //positions[i+2]
+      });
+    }
+
+    patchedTMDs.push({
+      objects: [{vertex: vertex}]
+    })
+
+    // const objects = [];
+    // objects.push({vertex: vertex})
+    // patchedTMDs.objects = objects;
+  });
+
+  console.log(patchedTMDs)
+
+  const patchedFile = tmdParser.patchVertex(binfile_test, tmds_test, patchedTMDs);
+
+  const blob = new Blob([patchedFile.dataView], { type: "application/octet-stream" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "PATCHED.BIN";
+  link.click();
+  URL.revokeObjectURL(link.href);
+
+  // Aunque ya pude hacer que descargara un archivo BIN,
+  // hay que revisar que la información ya que desde JS
+  // vienen con muchos decimales y al pasarlos al BIN,
+  // no se redondean correctamente.
+  // (Ej: -7699.999809265137 se queda como -7699, pero lo esperado es -7700)
+
+})
 
 /**
  * THREE JS STUFF
@@ -115,7 +187,7 @@ function renderTMDs(data) {
   /**
    * TMD MODELS
    */
-  const models = [];
+  models = [];
   const backupModels = [];
   const interactions = [];
   let activeInteraction = null;

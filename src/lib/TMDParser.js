@@ -91,4 +91,38 @@ export default class TMDParser {
 
 		return tmd;
 	}
+
+	patchVertex(binfile, tmds, data) {
+		const patchedFile = binfile;
+		const vertex = [];
+		tmds.forEach((tmd, index) => {
+			binfile.seek(parseInt(tmd._offset, 16)); // move to the TMD
+			binfile.seek(binfile.offset + 12); // move 12 bytes (header size)
+
+			let objOffset = binfile.offset;
+			for(let i = 0; i < tmd.objects.length; i++) {
+				binfile.seek(objOffset + tmd.objects[i].vertexTop);
+
+				for (let vi = 0; vi < tmd.objects[i].numVertex; vi++) {
+					patchedFile.dataView.setInt16(binfile.offset,     data[index].objects[i].vertex[vi].x, true); // x
+					patchedFile.dataView.setInt16(binfile.offset + 2, data[index].objects[i].vertex[vi].y, true); // y
+					patchedFile.dataView.setInt16(binfile.offset + 4, data[index].objects[i].vertex[vi].z, true); // z
+
+					binfile.seek(binfile.offset + 8) // x, y, z, PAD
+
+					// vertex.push({
+					// 	x: binfile.nextInt16(),
+					// 	y: binfile.nextInt16(),
+					// 	z: binfile.nextInt16()
+					// });
+					// binfile.nextInt16(); // discard the PAD (0x0000)
+				}
+
+				objOffset += 28; // block size
+			}
+		})
+
+		console.log(vertex)
+		return patchedFile;
+	}
 }
