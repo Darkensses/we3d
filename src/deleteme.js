@@ -42,7 +42,30 @@ inputFile.addEventListener('change', async function (evt) {
 
       console.log(tmds)
 
-      console.log(tmds[10].objects[0].vertex)
+      //console.log(tmds[10].objects[0].vertex)
+
+      // calcular tamaño
+      const boxsizes = [];
+      tmds.forEach(tmd => {
+        const coords = tmd.objects[0].vertex;
+        const box = new THREE.Box3();
+        coords.forEach(p => {
+          box.expandByPoint(new THREE.Vector3(p.x, p.y, p.z));
+        });
+        const sizeBox = new THREE.Vector3();
+        box.getSize(sizeBox);
+        //console.log(`Dimensiones: width=${sizeBox.x}, height=${sizeBox.y}, depth=${sizeBox.z}`);
+
+        // Obtener el maximo de las tres coordenadas
+        // https://stackoverflow.com/questions/11142884/fast-way-to-get-the-min-max-values-among-properties-of-object
+        const maxCoord = Math.max(...Object.values(sizeBox))
+        boxsizes.push(maxCoord);
+      });
+
+      console.log(boxsizes)
+      const average = boxsizes.reduce((a, b) => a + b) / boxsizes.length;
+      console.log(average);
+
       if(tweakpane !== null) {
         tweakpane.dispose();
       }
@@ -58,20 +81,7 @@ inputFile.addEventListener('change', async function (evt) {
 // se están empalmandolos demás modelos
 const buttonDownload = document.getElementById('download');
 buttonDownload.addEventListener('click', function(evt) {
-  // if(models.length > 0) {
-  //   models.forEach((tmd, index) => {
-  //     if(index === 10) {
-  //       const positions = tmd.mesh.geometry.attributes.position.array.slice();
-  //       for(let i = 0; i < positions.length; i+=3) {
-  //         console.log({
-  //           x: positions[i],
-  //           y: positions[i+1],
-  //           z: positions[i+2]
-  //         })
-  //       }
-  //     }
-  //   })
-  // }
+
   const tmdParser = new TMDParser();
   //console.log(models[0].mesh.geometry.attributes.position.array.slice())
   let patchedTMDs = [];
@@ -176,15 +186,6 @@ function renderTMDs(data) {
   composer.addPass(bloomPass);
 
   /**
-   * Mesh: Dummy Mesh for testing
-   */
-  // const geometry = new THREE.BoxGeometry(3, 3, 3);
-  // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
-  // const mesh = new THREE.Mesh(geometry, material);
-  // scene.add(mesh)
-  // console.log(sizes)
-
-  /**
    * TMD MODELS
    */
   models = [];
@@ -194,7 +195,7 @@ function renderTMDs(data) {
 
   data.forEach((tmd, index) => {
     const geometry = new THREE.BufferGeometry();
-    //const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => [x / 1000, y / 1000, z / 1000]));
+
     const scale = 0.001;
     const rotationX = -Math.PI;
     const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => {
@@ -220,7 +221,6 @@ function renderTMDs(data) {
 
     geometry.setIndex(indices);
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-
 
     const material = new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true});
     const mesh = new THREE.Mesh(geometry, material);
