@@ -46,30 +46,76 @@ export default class TMDParser {
 				if (packetHeader === 0x2D010709) { // Flat, Texture
 					// Let's move 20 bytes to get the vertex index.
 					reader.seek(reader.offset + 20);
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
 				}
 				if (packetHeader === 0x3D010A0C) { // Gradation, Texture
 					// Let's move 32 bytes to get the vertex index.
 					reader.seek(reader.offset + 32);
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
 				}
 				if (packetHeader === 0x3F010A0C) { // Unknow, found on debug
 					// Probably it's the same as the "Gradation, Texture"
 					// Let's move 32 bytes to get the vertex index.
 					reader.seek(reader.offset + 32);
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
 				}
 				if (packetHeader === 0x2F010709) { // Unknow, found on debug
 					// Probably it's the same as the "Flat, Texture"
 					// Let's move 20 bytes to get the vertex index.
 					reader.seek(reader.offset + 20);
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
 				}
 				if (packetHeader === 0x3B010608) { // Unknow, found on debug
 					// Probably it's the same as the "Gradation, No-Texture"
 					// Let's move 16 bytes to get the vertex index.
 					reader.seek(reader.offset + 16);
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
 				}
-				vertexIdx.push(reader.nextUint16());
-				vertexIdx.push(reader.nextUint16());
-				vertexIdx.push(reader.nextUint16());
-				vertexIdx.push(reader.nextUint16());
+
+
+				//TODO: Cup models are built different, so it's necessary to
+				//read the vertex according to it.
+				if (packetHeader === 0x3C00080C) { // Gouraud, Texture
+					// Let's move 16 bytes to get the vertex index.
+					reader.seek(reader.offset + 16);
+					vertexIdx.push(reader.nextUint16());
+					reader.nextInt16();//normal
+					vertexIdx.push(reader.nextUint16());
+					reader.nextInt16();//normal
+					vertexIdx.push(reader.nextUint16());
+					reader.nextInt16();//normal
+					vertexIdx.push(reader.nextUint16());
+					reader.nextInt16();//normal
+				}
+				if (packetHeader === 0x2E000709) { // Unknow, found on debug
+					// Probably it's the same as the "Flat, Texture"
+					// Let's move 16 bytes to get the vertex index.
+					reader.seek(reader.offset + 16);
+					vertexIdx.push(reader.nextUint16());
+					reader.nextUint16()//normal
+					vertexIdx.push(reader.nextUint16());
+					vertexIdx.push(reader.nextUint16());
+					reader.nextUint16()//pad
+					vertexIdx.push(reader.nextUint16());
+				}
+				/**/
+
+
 			}
 			object.vertexIdx = vertexIdx; // if you divide by 4, it must get the numPrimitive
 
