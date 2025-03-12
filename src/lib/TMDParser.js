@@ -50,6 +50,8 @@ export default class TMDParser {
 					vertexIdx.push(reader.nextUint16());
 					vertexIdx.push(reader.nextUint16());
 					vertexIdx.push(reader.nextUint16());
+
+					// v1, v0, v3, v2
 				}
 				if (packetHeader === 0x3D010A0C) { // Gradation, Texture
 					// Let's move 32 bytes to get the vertex index.
@@ -58,6 +60,8 @@ export default class TMDParser {
 					vertexIdx.push(reader.nextUint16());
 					vertexIdx.push(reader.nextUint16());
 					vertexIdx.push(reader.nextUint16());
+
+					// v1, v0, v3, v2
 				}
 				if (packetHeader === 0x3F010A0C) { // Unknow, found on debug
 					// Probably it's the same as the "Gradation, Texture"
@@ -92,26 +96,31 @@ export default class TMDParser {
 				//read the vertex according to it.
 				if (packetHeader === 0x3C00080C) { // Gouraud, Texture
 					// Let's move 16 bytes to get the vertex index.
+					console.log('Im gouraud')
 					reader.seek(reader.offset + 16);
-					vertexIdx.push(reader.nextUint16());
 					reader.nextInt16();//normal
-					vertexIdx.push(reader.nextUint16());
+					const v0 = reader.nextUint16();
 					reader.nextInt16();//normal
-					vertexIdx.push(reader.nextUint16());
+					const v1 = reader.nextUint16();
 					reader.nextInt16();//normal
-					vertexIdx.push(reader.nextUint16());
+					const v2 = reader.nextUint16();
 					reader.nextInt16();//normal
+					const v3 = reader.nextUint16();
+
+					vertexIdx.push(...[v1,v0,v3,v2]);
 				}
 				if (packetHeader === 0x2E000709) { // Unknow, found on debug
 					// Probably it's the same as the "Flat, Texture"
 					// Let's move 16 bytes to get the vertex index.
 					reader.seek(reader.offset + 16);
-					vertexIdx.push(reader.nextUint16());
 					reader.nextUint16()//normal
-					vertexIdx.push(reader.nextUint16());
-					vertexIdx.push(reader.nextUint16());
+					const v0 = reader.nextUint16();
+					const v1 = reader.nextUint16();
+					const v2 = reader.nextUint16();
+					const v3 = reader.nextUint16();
 					reader.nextUint16()//pad
-					vertexIdx.push(reader.nextUint16());
+
+					vertexIdx.push(...[v1,v0,v3,v2]);
 				}
 				/**/
 
