@@ -9,7 +9,7 @@ import CameraControls from 'camera-controls';
 /**
  * My libs
  */
-import TMDParser from './lib/TMDParser';
+import TMDParser from './lib/TMDParser.v2.js';
 import BinaryReader from './lib/BinaryReader';
 import VertexInteraction from './lib/VertexInteraction';
 
