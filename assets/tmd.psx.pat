@@ -33,6 +33,22 @@ struct Primitive {
 };
 
 /**
+Packet Configuration for 4 Vertex Polygon with Light Source Calculation
+*/
+namespace FVPWL {
+    struct Flat_Texture {
+        Primitive header;
+        u8 U0; u8 V0;       u16 CBA;
+        u8 U1; u8 V1;       u16 TSB;
+        u8 U2; u8 V2;        $ += 2;
+        u8 U3; u8 V3;        $ += 2;
+        u16 normal0;    u16 vertex0;
+        u16 vertex1;    u16 vertex2;
+        u16 vertex3;         $ += 2;
+    };
+}
+
+/**
 Packet Configuration for 4 Vertex Polygon with No Light Source Calculation
 */
 namespace FVPNL {
@@ -96,6 +112,9 @@ struct TMD {
             } else 
             if (std::mem::read_unsigned($, 4) == 0x2d010709) {
                  FVPNL::Flat_Texture packetData[header.nObj];            
+            } else 
+            if (std::mem::read_unsigned($, 4) == 0x2c000709) {
+                FVPWL::Flat_Texture packedData[header.nObj];
             }           
         }
         (_): {            
