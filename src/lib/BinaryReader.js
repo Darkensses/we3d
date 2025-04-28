@@ -51,7 +51,7 @@ export default class BinaryReader {
 		return value;
 	}
 
-	nextUint8() {
+	nextInt8() {
 		this.#assert(this.offset + 1 <= this.dataView.byteLength, 'No enough bytes to read int8');
 		const value = this.dataView.getInt8(this.offset, this.littleEndian);
 		this.offset += 1;
