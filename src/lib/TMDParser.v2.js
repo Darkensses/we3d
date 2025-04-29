@@ -352,7 +352,7 @@ export default class TMDParser {
 					patchedFile.dataView.setInt16(binfile.offset + 2, data[index].objects[i].vertex[vi].y, true); // y
 					patchedFile.dataView.setInt16(binfile.offset + 4, data[index].objects[i].vertex[vi].z, true); // z
 
-					binfile.seek(binfile.offset + 8) // x, y, z, PAD
+					binfile.seek(binfile.offset + 8) //PAD
 
 					// vertex.push({
 					// 	x: binfile.nextInt16(),
