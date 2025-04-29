@@ -13,8 +13,26 @@ import TMDParser from './lib/TMDParser.v2.js';
 import BinaryReader from './lib/BinaryReader';
 import VertexInteraction from './lib/VertexInteraction';
 
+function clearScene(scene) {
+  while (scene.children.length > 0) {
+      const object = scene.children[0];
+      scene.remove(object);
+
+      // Muy importante: liberar geometría y material si existen
+      if (object.geometry) object.geometry.dispose();
+      if (object.material) {
+          if (Array.isArray(object.material)) {
+              object.material.forEach(mat => mat.dispose());
+          } else {
+              object.material.dispose();
+          }
+      }
+  }
+}
+
 const canvas = document.querySelector('canvas#webgl');
 const divEditor = document.querySelector('div#editor');
+const scene = new THREE.Scene();
 let tweakpane = null;
 let models = [];
 
@@ -42,8 +60,6 @@ inputFile.addEventListener('change', async function (evt) {
 
       console.log(tmds)
 
-      //console.log(tmds[10].objects[0].vertex)
-
       // calcular tamaño
       const boxsizes = [];
       tmds.forEach(tmd => {
@@ -69,6 +85,7 @@ inputFile.addEventListener('change', async function (evt) {
       if(tweakpane !== null) {
         tweakpane.dispose();
       }
+      clearScene(scene);
       renderTMDs(tmds);
     }
 
@@ -76,14 +93,10 @@ inputFile.addEventListener('change', async function (evt) {
   }
 });
 
-// Aunque si sirve, hay que revisar como funciona el renderizado
-// cada vez que seabre un archivo, es decir, tiene que resetearse todo!
-// se están empalmandolos demás modelos
 const buttonDownload = document.getElementById('download');
 buttonDownload.addEventListener('click', function(evt) {
 
   const tmdParser = new TMDParser();
-  //console.log(models[0].mesh.geometry.attributes.position.array.slice())
   let patchedTMDs = [];
 
   const iScale = 1/0.001;
@@ -106,9 +119,6 @@ buttonDownload.addEventListener('click', function(evt) {
       objects: [{vertex: vertex}]
     })
 
-    // const objects = [];
-    // objects.push({vertex: vertex})
-    // patchedTMDs.objects = objects;
   });
 
   console.log(patchedTMDs)
@@ -122,12 +132,6 @@ buttonDownload.addEventListener('click', function(evt) {
   link.click();
   URL.revokeObjectURL(link.href);
 
-  // Aunque ya pude hacer que descargara un archivo BIN,
-  // hay que revisar que la información ya que desde JS
-  // vienen con muchos decimales y al pasarlos al BIN,
-  // no se redondean correctamente.
-  // (Ej: -7699.999809265137 se queda como -7699, pero lo esperado es -7700)
-
 })
 
 /**
@@ -135,7 +139,7 @@ buttonDownload.addEventListener('click', function(evt) {
  */
 function renderTMDs(data) {
 
-  const scene = new THREE.Scene();
+  //const scene = new THREE.Scene();
 
   /**
    * Sizes
@@ -148,6 +152,7 @@ function renderTMDs(data) {
     camera.updateProjectionMatrix();
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.render();
   });
 
   /**
@@ -224,8 +229,6 @@ function renderTMDs(data) {
 
     const material = new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true});
     const mesh = new THREE.Mesh(geometry, material);
-    //mesh.rotation.x = -Math.PI;
-    //mesh.scale.set(scale, scale, scale);
     mesh.visible = true;
     scene.add(mesh);
 
@@ -242,11 +245,6 @@ function renderTMDs(data) {
 
     models.push({mesh, points, visible:true});
     backupModels.push({positions: geometry.attributes.position.array.slice()})
-
-    // TODO:
-    // I need to scale the geometry, not the mesh,
-    // because the points are being set according to
-    // the geometry positions.
 
   });
 
@@ -290,7 +288,9 @@ function renderTMDs(data) {
       tmd.points.visible = ev.value;
       composer.render();
     });
-    f.addButton({title: 'Focus'}).on('click', () => cameraControls.fitToSphere(tmd.mesh, true));
+    f.addButton({title: 'Focus'}).on('click', () => {
+      cameraControls.fitToSphere(tmd.mesh, true)      
+    });
     f.addButton({title: 'Reset'}).on('click', () => {
       const positions = tmd.mesh.geometry.attributes.position.array;
       const originalPositions = backupModels[index].positions;
@@ -316,12 +316,12 @@ function renderTMDs(data) {
 
     //renderer.render(scene, camera); //comment if you want to use unreal bloom pass
 
-    //mesh.rotation.y += 0.01; // Dummy Mesh for testing
     window.requestAnimationFrame(animate);
 
     if (updated) {
       composer.render();
     }
+    composer.render();
   };
 
   animate();
