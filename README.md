@@ -13,6 +13,7 @@ npm run dev
 
 ### References
 https://psx.arthus.net/sdk/Psy-Q/DOCS/Devrefs/Filefrmt.pdf
+https://github.com/rickomax/psxprev/blob/no-deps/Common/Parsers/TMDParser.cs
 
 ---
 
