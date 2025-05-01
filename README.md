@@ -73,3 +73,7 @@ When you're ready to write your first lines of code, please try to follow as muc
 - Refactor and clean the code.
 - Add tests for TMDParser.
 - Add Transformation Controls.
+
+### Considerations
+- Winning Eleven models seem to have only one object, that's why we only access to the index zero in the renderTMDs fucntion to build the scene using ThreeJS.
+- The most important structures are the [vertex indices](https://github.com/Darkensses/we3d/blob/master/src/lib/TMDParser.v2.js#L52) and the [vertex positions](https://github.com/Darkensses/we3d/blob/master/src/lib/TMDParser.v2.js#L322). Everything else is only used to get to that data.
