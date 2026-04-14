@@ -10,6 +10,7 @@ import CameraControls from 'camera-controls';
  * My libs
  */
 import TMDParser from './lib/TMDParser.v2.js';
+import ModelBINParser from './lib/ModelBINParser.js';
 import BinaryReader from './lib/BinaryReader';
 import VertexInteraction from './lib/VertexInteraction';
 
@@ -38,6 +39,8 @@ let models = [];
 
 let binfile_test;
 let tmds_test;
+let activeParser = null;
+let isModelBIN   = false;
 
 CameraControls.install( { THREE: THREE } );
 
@@ -52,8 +55,9 @@ inputFile.addEventListener('change', async function (evt) {
       const arrayBuffer = fileReader.result;
 
       const reader = new BinaryReader(arrayBuffer);
-      const tmdParser = new TMDParser();
-      const tmds = tmdParser.parse(reader);
+      isModelBIN   = file.name.toUpperCase() === 'MODEL.BIN';
+      activeParser = isModelBIN ? new ModelBINParser() : new TMDParser();
+      const tmds   = activeParser.parse(reader);
 
       binfile_test = reader;
       tmds_test = tmds;
@@ -86,7 +90,7 @@ inputFile.addEventListener('change', async function (evt) {
         tweakpane.dispose();
       }
       clearScene(scene);
-      renderTMDs(tmds);
+      renderTMDs(tmds, isModelBIN);  // isModelBIN drives scale, visibility, camera
     }
 
     fileReader.readAsArrayBuffer(file);
@@ -96,10 +100,9 @@ inputFile.addEventListener('change', async function (evt) {
 const buttonDownload = document.getElementById('download');
 buttonDownload.addEventListener('click', function(evt) {
 
-  const tmdParser = new TMDParser();
   let patchedTMDs = [];
 
-  const iScale = 1/0.001;
+  const iScale    = 1 / (isModelBIN ? 0.1 : 0.001);
   const iRotation = Math.PI;
 
   models.forEach((tmd) => {
@@ -123,7 +126,7 @@ buttonDownload.addEventListener('click', function(evt) {
 
   console.log(patchedTMDs)
 
-  const patchedFile = tmdParser.patchVertex(binfile_test, tmds_test, patchedTMDs);
+  const patchedFile = activeParser.patchVertex(binfile_test, tmds_test, patchedTMDs);
 
   const blob = new Blob([patchedFile.dataView], { type: "application/octet-stream" });
   const link = document.createElement("a");
@@ -137,7 +140,7 @@ buttonDownload.addEventListener('click', function(evt) {
 /**
  * THREE JS STUFF
  */
-function renderTMDs(data) {
+function renderTMDs(data, isModelBIN = false) {
 
   //const scene = new THREE.Scene();
 
@@ -168,13 +171,13 @@ function renderTMDs(data) {
    */
   const clock = new THREE.Clock();
   const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.01, 1000);
-  camera.position.set(0, 0, 5);
+  camera.position.set(0, 0, isModelBIN ? 15 : 5);
 
   const cameraControls = new CameraControls( camera, renderer.domElement );
   cameraControls.infinityDolly = true;
   cameraControls.dollyToCursor = true;
-  cameraControls.minDistance = 3;
-  cameraControls.maxDistance = 7;
+  cameraControls.minDistance = isModelBIN ? 1  : 3;
+  cameraControls.maxDistance = isModelBIN ? 50 : 7;
 
   /**
    * Post-processing
@@ -201,7 +204,7 @@ function renderTMDs(data) {
   data.forEach((tmd, index) => {
     const geometry = new THREE.BufferGeometry();
 
-    const scale = 0.001;
+    const scale = isModelBIN ? 0.1 : 0.001;
     const rotationX = -Math.PI;
     const vertices = new Float32Array(tmd.objects[0].vertex.flatMap(({ x, y, z }) => {
       x *= scale;
@@ -227,23 +230,25 @@ function renderTMDs(data) {
     geometry.setIndex(indices);
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
+    const visible = !isModelBIN;
+
     const material = new THREE.MeshBasicMaterial({color: 0x00ff00, wireframe: true});
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.visible = true;
+    mesh.visible = visible;
     scene.add(mesh);
 
     const points = new THREE.Points(geometry, new THREE.PointsMaterial({
       size: 0.1,
       color: 'white'
     }));
-    points.visible = true;
+    points.visible = visible;
     scene.add(points);
 
     const interaction = new VertexInteraction(canvas, geometry, points, 0.1, cameraControls, cameraControls.camera, sizes);
     interactions.push(interaction)
 
 
-    models.push({mesh, points, visible:true});
+    models.push({mesh, points, visible});
     backupModels.push({positions: geometry.attributes.position.array.slice()})
 
   });
