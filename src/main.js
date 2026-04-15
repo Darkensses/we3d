@@ -102,10 +102,11 @@ buttonDownload.addEventListener('click', function(evt) {
 
   let patchedTMDs = [];
 
-  const iScale    = 1 / (isModelBIN ? 0.1 : 0.001);
-  const iRotation = Math.PI;
+  const renderScale = isModelBIN ? 0.1 : 0.001;
+  const iRotation   = Math.PI;
 
   models.forEach((tmd) => {
+    const iScale    = (1 / renderScale) * tmd.scale;
     const positions = tmd.mesh.geometry.attributes.position.array.slice();
     const vertex = []
     for(let i = 0; i < positions.length; i+=3) {
@@ -248,7 +249,7 @@ function renderTMDs(data, isModelBIN = false) {
     interactions.push(interaction)
 
 
-    models.push({mesh, points, visible});
+    models.push({mesh, points, visible, scale: 1.0});
     backupModels.push({positions: geometry.attributes.position.array.slice()})
 
   });
@@ -293,6 +294,10 @@ function renderTMDs(data, isModelBIN = false) {
       tmd.points.visible = ev.value;
       composer.render();
     });
+    if (isModelBIN) {
+      f.addBinding(tmd, 'scale', { min: 0.1, max: 3.0, step: 0.01, label: 'scale' })
+       .on('change', () => composer.render());
+    }
     f.addButton({title: 'Focus'}).on('click', () => {
       cameraControls.fitToSphere(tmd.mesh, true)      
     });
