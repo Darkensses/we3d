@@ -1,11 +1,12 @@
 import './style.css';
 import * as THREE from 'three';
 import CameraControls from 'camera-controls';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { STADIUMS, stadiumById } from './lib/stadiums.js';
 import SelectBINParser from './lib/SelectBINParser.js';
 import TMDParser from './lib/TMDParser.v2.js';
 import BinaryReader from './lib/BinaryReader.js';
-import { SCALE, psxToWorld } from './lib/coords.js';
+import { SCALE, psxToWorld, worldToPsx } from './lib/coords.js';
 
 CameraControls.install({ THREE });
 
@@ -27,6 +28,25 @@ camera.position.set(0, 8, 30);
 const cameraControls = new CameraControls(camera, renderer.domElement);
 cameraControls.maxDistance = 200;
 
+const transformControls = new TransformControls(camera, renderer.domElement);
+transformControls.setSize(0.8);
+scene.add(transformControls.getHelper());
+transformControls.addEventListener('dragging-changed', (e) => {
+  cameraControls.enabled = !e.value;
+});
+
+let selectedIndex = -1;
+let onFlagChanged = null; // assigned by the numeric panel in a later task
+
+transformControls.addEventListener('objectChange', () => {
+  if (selectedIndex < 0) return;
+  const p = worldToPsx(markers[selectedIndex].position);
+  const f = flagsState[selectedIndex];
+  f.x = p.x; f.y = p.y; f.z = p.z;
+  parser.writeFlags(currentId, flagsState);
+  onFlagChanged?.(selectedIndex);
+});
+
 window.addEventListener('resize', () => {
   sizes.width = divEditor.clientWidth;
   sizes.height = divEditor.clientHeight;
@@ -46,6 +66,30 @@ scene.add(markerGroup);
 const MARKER_RADIUS = 0.4;
 const markerGeo = new THREE.SphereGeometry(MARKER_RADIUS, 12, 12);
 const markerMat = new THREE.MeshBasicMaterial({ color: 0xff3366 });
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+function selectMarker(index) {
+  selectedIndex = index;
+  if (index < 0) {
+    transformControls.detach();
+  } else {
+    transformControls.attach(markers[index]);
+  }
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (transformControls.dragging) return;
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(markers, false);
+  if (hits.length > 0) {
+    selectMarker(hits[0].object.userData.flagIndex);
+  }
+});
 
 function buildStadiumMesh(tmd) {
   const geometry = new THREE.BufferGeometry();
@@ -69,6 +113,8 @@ function buildStadiumMesh(tmd) {
 }
 
 function buildMarkers(id) {
+  selectedIndex = -1;
+  transformControls.detach();
   markers.forEach((m) => markerGroup.remove(m));
   markers.length = 0;
   flagsState = parser.readFlags(id);
