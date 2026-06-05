@@ -59,6 +59,8 @@ window.addEventListener('resize', () => {
 
 let stadiumMesh = null;
 let currentId = 0x0e;
+let useOwnGrdm = false;
+let ownGrdmTmd = null;
 let flagsState = [];        // 10 × {x,y,z} PSX coords (source of truth for UI)
 const markers = [];         // 10 × THREE.Mesh spheres
 const markerGroup = new THREE.Group();
@@ -172,7 +174,7 @@ async function showStadium(id) {
   const meta = stadiumById(id);
   setStatus(`loading ${meta.file}…`);
   try {
-    const tmd = await fetchGrdmTmd(meta.file);
+    const tmd = useOwnGrdm && ownGrdmTmd ? ownGrdmTmd : await fetchGrdmTmd(meta.file);
     if (stadiumMesh) {
       scene.remove(stadiumMesh);
       stadiumMesh.geometry.dispose();
@@ -201,7 +203,35 @@ function fillDropdown() {
     opt.title = `ISS Pro: ${s.issName}`;
     select.appendChild(opt);
   }
-  select.addEventListener('change', () => showStadium(Number(select.value)));
+  select.addEventListener('change', () => { useOwnGrdm = false; showStadium(Number(select.value)); });
+}
+
+function wireSourceToggle() {
+  const useOwn = document.getElementById('useOwnFiles');
+  const ownFiles = document.getElementById('ownFiles');
+  const selectInput = document.getElementById('selectInput');
+  const grdmInput = document.getElementById('grdmInput');
+
+  useOwn.addEventListener('change', () => {
+    ownFiles.classList.toggle('hidden', !useOwn.checked);
+  });
+
+  selectInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    parser.parse(await file.arrayBuffer());
+    setStatus(parser.valid ? 'custom SELECT.BIN loaded' : 'wrong size — not 300648 bytes');
+    if (parser.valid) showStadium(currentId);
+  });
+
+  grdmInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new BinaryReader(await file.arrayBuffer());
+    ownGrdmTmd = new TMDParser().parse(reader)[0];
+    useOwnGrdm = true;
+    showStadium(currentId);
+  });
 }
 
 async function loadBundledSelect() {
@@ -220,6 +250,7 @@ function animate() {
 async function main() {
   onFlagChanged = (i) => { if (pane) pane.refresh(); };
   fillDropdown();
+  wireSourceToggle();
   await loadBundledSelect();
   await showStadium(0x0e);
   animate();
