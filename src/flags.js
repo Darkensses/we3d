@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import CameraControls from 'camera-controls';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { Pane } from 'tweakpane';
 import { STADIUMS, stadiumById } from './lib/stadiums.js';
 import SelectBINParser from './lib/SelectBINParser.js';
 import TMDParser from './lib/TMDParser.v2.js';
@@ -36,7 +37,7 @@ transformControls.addEventListener('dragging-changed', (e) => {
 });
 
 let selectedIndex = -1;
-let onFlagChanged = null; // assigned by the numeric panel in a later task
+let onFlagChanged = null; // assigned in main(); refreshes the panel after a gizmo edit
 
 transformControls.addEventListener('objectChange', () => {
   if (selectedIndex < 0) return;
@@ -62,6 +63,9 @@ let flagsState = [];        // 10 × {x,y,z} PSX coords (source of truth for UI)
 const markers = [];         // 10 × THREE.Mesh spheres
 const markerGroup = new THREE.Group();
 scene.add(markerGroup);
+
+let pane = null;
+const originalFlags = [];   // snapshot per stadium load, for reset
 
 const MARKER_RADIUS = 0.4;
 const markerGeo = new THREE.SphereGeometry(MARKER_RADIUS, 12, 12);
@@ -118,6 +122,8 @@ function buildMarkers(id) {
   markers.forEach((m) => markerGroup.remove(m));
   markers.length = 0;
   flagsState = parser.readFlags(id);
+  originalFlags.length = 0;
+  flagsState.forEach((f) => originalFlags.push({ ...f }));
   flagsState.forEach((flag, i) => {
     const mesh = new THREE.Mesh(markerGeo, markerMat);
     const w = psxToWorld(flag);
@@ -125,6 +131,31 @@ function buildMarkers(id) {
     mesh.userData.flagIndex = i;
     markerGroup.add(mesh);
     markers.push(mesh);
+  });
+}
+
+// flagsState[i] (PSX) was edited via panel -> move marker + write buffer.
+function applyPanel(i) {
+  const w = psxToWorld(flagsState[i]);
+  markers[i].position.set(w.x, w.y, w.z);
+  parser.writeFlags(currentId, flagsState);
+}
+
+function buildPanel() {
+  if (pane) pane.dispose();
+  pane = new Pane({ container: document.getElementById('toolpane'), title: 'Side Flags', expanded: true });
+
+  flagsState.forEach((flag, i) => {
+    const f = pane.addFolder({ title: `Flag ${i}`, expanded: false });
+    f.addBinding(flag, 'x', { step: 1 }).on('change', () => applyPanel(i));
+    f.addBinding(flag, 'y', { step: 1 }).on('change', () => applyPanel(i));
+    f.addBinding(flag, 'z', { step: 1 }).on('change', () => applyPanel(i));
+    f.addButton({ title: 'Reset' }).on('click', () => {
+      const o = originalFlags[i];
+      flag.x = o.x; flag.y = o.y; flag.z = o.z;
+      applyPanel(i);
+      pane.refresh();
+    });
   });
 }
 
@@ -151,6 +182,7 @@ async function showStadium(id) {
     scene.add(stadiumMesh);
     currentId = id;
     buildMarkers(id);
+    buildPanel();
     cameraControls.fitToSphere(stadiumMesh, true);
     setStatus(`${meta.name}`);
   } catch (err) {
@@ -186,6 +218,7 @@ function animate() {
 }
 
 async function main() {
+  onFlagChanged = (i) => { if (pane) pane.refresh(); };
   fillDropdown();
   await loadBundledSelect();
   await showStadium(0x0e);
