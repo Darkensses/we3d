@@ -234,6 +234,17 @@ function wireSourceToggle() {
   });
 }
 
+function wireExport() {
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([parser.getBuffer()], { type: 'application/octet-stream' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'SELECT.BIN';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
+}
+
 async function loadBundledSelect() {
   const res = await fetch('/assets/SELECT.BIN');
   parser.parse(await res.arrayBuffer());
@@ -251,6 +262,7 @@ async function main() {
   onFlagChanged = (i) => { if (pane) pane.refresh(); };
   fillDropdown();
   wireSourceToggle();
+  wireExport();
   await loadBundledSelect();
   await showStadium(0x0e);
   animate();
