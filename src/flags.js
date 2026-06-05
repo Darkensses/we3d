@@ -5,7 +5,7 @@ import { STADIUMS, stadiumById } from './lib/stadiums.js';
 import SelectBINParser from './lib/SelectBINParser.js';
 import TMDParser from './lib/TMDParser.v2.js';
 import BinaryReader from './lib/BinaryReader.js';
-import { SCALE } from './lib/coords.js';
+import { SCALE, psxToWorld } from './lib/coords.js';
 
 CameraControls.install({ THREE });
 
@@ -37,6 +37,15 @@ window.addEventListener('resize', () => {
 });
 
 let stadiumMesh = null;
+let currentId = 0x0e;
+let flagsState = [];        // 10 × {x,y,z} PSX coords (source of truth for UI)
+const markers = [];         // 10 × THREE.Mesh spheres
+const markerGroup = new THREE.Group();
+scene.add(markerGroup);
+
+const MARKER_RADIUS = 0.4;
+const markerGeo = new THREE.SphereGeometry(MARKER_RADIUS, 12, 12);
+const markerMat = new THREE.MeshBasicMaterial({ color: 0xff3366 });
 
 function buildStadiumMesh(tmd) {
   const geometry = new THREE.BufferGeometry();
@@ -57,6 +66,20 @@ function buildStadiumMesh(tmd) {
   geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
   const material = new THREE.MeshBasicMaterial({ color: 0x00aa00, wireframe: true });
   return new THREE.Mesh(geometry, material);
+}
+
+function buildMarkers(id) {
+  markers.forEach((m) => markerGroup.remove(m));
+  markers.length = 0;
+  flagsState = parser.readFlags(id);
+  flagsState.forEach((flag, i) => {
+    const mesh = new THREE.Mesh(markerGeo, markerMat);
+    const w = psxToWorld(flag);
+    mesh.position.set(w.x, w.y, w.z);
+    mesh.userData.flagIndex = i;
+    markerGroup.add(mesh);
+    markers.push(mesh);
+  });
 }
 
 async function fetchGrdmTmd(file) {
@@ -80,6 +103,8 @@ async function showStadium(id) {
     }
     stadiumMesh = buildStadiumMesh(tmd);
     scene.add(stadiumMesh);
+    currentId = id;
+    buildMarkers(id);
     cameraControls.fitToSphere(stadiumMesh, true);
     setStatus(`${meta.name}`);
   } catch (err) {
