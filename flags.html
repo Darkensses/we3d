@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WE3D — Flag Placement Editor</title>
+  </head>
+  <body class="bg-black">
+    <div class="flex flex-col h-screen">
+      <div class="text-[#00ff00] w-full flex flex-col items-center pt-4 pb-2">
+        <p class="text-xs">WE2002 Side-Stand Flag Placement Editor</p>
+      </div>
+
+      <div class="w-full flex flex-wrap justify-center items-center gap-4 pb-2 text-[#00ff00] text-xs">
+        <label>Stadium:
+          <select id="stadiumSelect" class="bg-black border border-[#00ff00] text-[#00ff00] p-1"></select>
+        </label>
+
+        <label><input type="checkbox" id="useOwnFiles" /> Load my own files</label>
+
+        <span id="ownFiles" class="hidden flex gap-2 items-center">
+          <label>SELECT.BIN <input type="file" id="selectInput" class="text-[#00ff00]" /></label>
+          <label>GRDM <input type="file" id="grdmInput" class="text-[#00ff00]" /></label>
+        </span>
+
+        <button id="exportBtn" class="bg-[#00ff00] p-2 cursor-pointer text-black">Export SELECT.BIN</button>
+        <span id="status"></span>
+      </div>
+
+      <div id="editor" class="relative flex-grow border-2 border-[#00ff00] flex items-stretch">
+        <div id="toolpane" class="h-full absolute right-[4px] overflow-y-auto z-10"></div>
+        <canvas id="webgl"></canvas>
+      </div>
+    </div>
+    <script type="module" src="/src/flags.js"></script>
+  </body>
+</html>
